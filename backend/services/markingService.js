@@ -7,20 +7,22 @@ const { markSciAnswer } = require('./aiEngineSci');
 
 const useReal = () => !!process.env.ANTHROPIC_API_KEY;
 
-async function markAnswer({ subject, questionText, ocrText, maxMarks, ocrConfidence, mockOcrEntry }) {
+// Simulated scripts are demo data with no real answer behind them — they must always use
+// mock marking, even when a real API key is configured, otherwise "Simulated demo" mode
+// (whose whole point is needing no real AI access) breaks the moment the key runs out of
+// credits or hits a rate limit. Real image uploads always require real marking; the
+// /scripts/upload route already refuses to accept uploads at all without a configured key.
+async function markAnswer({ subject, questionText, ocrText, maxMarks, ocrConfidence, mockOcrEntry, isUpload }) {
   const isMaths = subject === 'Mathematics';
   const isSci = subject === 'Chemistry' || subject === 'Physics';
 
-  if (useReal()) {
+  if (isUpload) {
     if (isMaths) return markMathsAnswer(questionText, { ocrText, methodMarks: mockOcrEntry?.methodMarks, answerMarks: mockOcrEntry?.answerMarks, ocrConfidence });
     if (isSci) return markSciAnswer(questionText, { ...mockOcrEntry, ocrText, ocrConfidence });
     return markEnglishAnswer(questionText, ocrText, maxMarks, ocrConfidence);
   }
 
-  if (isMaths) {
-    if (!mockOcrEntry) throw new Error('Real AI marking required for Maths uploads — set ANTHROPIC_API_KEY in backend/.env');
-    return mockMarkMathsAnswer(questionText, mockOcrEntry);
-  }
+  if (isMaths) return mockMarkMathsAnswer(questionText, mockOcrEntry);
   if (isSci) return mockMarkSciAnswer(questionText, mockOcrEntry || { ocrText, markingType: 'rubric', acceptedAnswers: [], maxMarks, ocrConfidence });
   return mockMarkAnswer(questionText, ocrText, maxMarks, ocrConfidence);
 }

@@ -71,7 +71,7 @@ router.get('/:id', async (req, res) => {
   res.json({ ...rest, mark_scheme_title: mark_scheme?.title || null, subject: mark_scheme?.subject || null, answers: answers.map(buildAnswerRow) });
 });
 
-async function processQuestions({ scriptId, subject, ocrResults }) {
+async function processQuestions({ scriptId, subject, ocrResults, isUpload }) {
   let totalAwarded = 0;
   for (const ocr of ocrResults) {
     const answer = await prisma.scriptAnswer.create({
@@ -82,7 +82,7 @@ async function processQuestions({ scriptId, subject, ocrResults }) {
         ocr_text: ocr.ocrText, ocr_confidence: ocr.ocrConfidence, flagged: !!ocr.flagged, image_path: ocr.imagePath || null,
       },
     });
-    const ai = await markAnswer({ subject, questionText: ocr.questionText, ocrText: ocr.ocrText, maxMarks: ocr.maxMarks, ocrConfidence: ocr.ocrConfidence, mockOcrEntry: ocr });
+    const ai = await markAnswer({ subject, questionText: ocr.questionText, ocrText: ocr.ocrText, maxMarks: ocr.maxMarks, ocrConfidence: ocr.ocrConfidence, mockOcrEntry: ocr, isUpload });
     totalAwarded += ai.marksAwarded;
     await prisma.aiResult.create({
       data: {
@@ -110,7 +110,7 @@ router.post('/', async (req, res) => {
   });
   const ocrResults = isMaths ? mockOcrMathsScript(questions) : isSci ? mockOcrSciScript(questions, scheme.subject) : mockOcrScript(script.id, questions);
   try {
-    const totalAwarded = await processQuestions({ scriptId: script.id, subject: scheme.subject, ocrResults });
+    const totalAwarded = await processQuestions({ scriptId: script.id, subject: scheme.subject, ocrResults, isUpload: false });
     await prisma.script.update({ where: { id: script.id }, data: { status: 'review', total_marks_awarded: totalAwarded, processed_at: new Date() } });
   } catch (err) {
     await prisma.script.update({ where: { id: script.id }, data: { status: 'error' } });
@@ -149,7 +149,7 @@ router.post('/upload', upload.any(), async (req, res) => {
       const { text, confidence } = await extractTextFromImage(file.path);
       return { questionNumber: q.question_number, questionText: q.question_text, maxMarks: q.max_marks, markingType: q.marking_type, acceptedAnswers: q.accepted_answers || [], methodMarks: q.method_marks, answerMarks: q.answer_marks, ocrText: text || '(No text detected)', ocrConfidence: confidence, imagePath: `/uploads/${path.basename(file.path)}` };
     }));
-    const totalAwarded = await processQuestions({ scriptId: script.id, subject: scheme.subject, ocrResults });
+    const totalAwarded = await processQuestions({ scriptId: script.id, subject: scheme.subject, ocrResults, isUpload: true });
     await prisma.script.update({ where: { id: script.id }, data: { status: 'review', total_marks_awarded: totalAwarded, processed_at: new Date() } });
   } catch (err) {
     await prisma.script.update({ where: { id: script.id }, data: { status: 'error' } });
