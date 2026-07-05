@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: scriptmark
+    env: node
+    plan: free
+    buildCommand: cd frontend && npm install && npm run build && cd ../backend && npm install && npx prisma generate
+    startCommand: cd backend && npm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: ANTHROPIC_MODEL
+        value: claude-sonnet-4-6

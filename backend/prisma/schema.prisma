@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Feedback {
+  id         String   @id @default(uuid())
+  teacher_id String
+  message    String
+  page       String?
+  created_at DateTime @default(now())
+}
+
+model Teacher {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  password_hash String
+  created_at    DateTime @default(now())
+
+  mark_schemes MarkScheme[]
+  scripts      Script[]
+}
+
+model MarkScheme {
+  id         String   @id @default(uuid())
+  teacher_id String
+  teacher    Teacher  @relation(fields: [teacher_id], references: [id])
+  title      String
+  subject    String
+  total_marks Int
+  created_at DateTime @default(now())
+
+  questions MarkSchemeQuestion[]
+  // Scripts already marked against a scheme block its deletion (see onDelete below) —
+  // avoids silently orphaning real student results.
+  scripts   Script[]
+
+  @@index([teacher_id])
+}
+
+model MarkSchemeQuestion {
+  id               String     @id @default(uuid())
+  mark_scheme_id   String
+  mark_scheme      MarkScheme @relation(fields: [mark_scheme_id], references: [id], onDelete: Cascade)
+  question_number  Int
+  question_text    String
+  max_marks        Int
+  marking_type     String     @default("rubric")
+  method_marks     Int?
+  answer_marks     Int?
+  accepted_answers String     @default("[]") // JSON-encoded string[] — SQLite has no native array/list type
+
+  @@index([mark_scheme_id])
+}
+
+model Script {
+  id                    String     @id @default(uuid())
+  teacher_id            String
+  teacher               Teacher    @relation(fields: [teacher_id], references: [id])
+  mark_scheme_id        String
+  mark_scheme           MarkScheme @relation(fields: [mark_scheme_id], references: [id], onDelete: Restrict)
+  student_name          String
+  status                String     @default("processing")
+  total_marks_awarded   Int?
+  total_marks_possible  Int
+  source                String
+  submitted_at          DateTime   @default(now())
+  processed_at          DateTime?
+
+  answers ScriptAnswer[]
+
+  @@index([teacher_id])
+  @@index([mark_scheme_id])
+}
+
+model ScriptAnswer {
+  id               String   @id @default(uuid())
+  script_id        String
+  script           Script   @relation(fields: [script_id], references: [id], onDelete: Cascade)
+  question_number  Int
+  question_text    String
+  max_marks        Int
+  marking_type     String?
+  accepted_answers String   @default("[]")
+  method_marks     Int?
+  answer_marks     Int?
+  ocr_text         String
+  ocr_confidence   Float
+  flagged          Boolean  @default(false)
+  image_path       String?
+
+  result AiResult?
+
+  @@index([script_id])
+}
+
+model AiResult {
+  id                String       @id @default(uuid())
+  script_answer_id  String       @unique
+  script_answer     ScriptAnswer @relation(fields: [script_answer_id], references: [id], onDelete: Cascade)
+  marks_awarded     Int
+  max_marks         Int
+  method_awarded    Int?
+  answer_awarded    Int?
+  feedback          String
+  ai_confidence     Float
+  evidence          String
+  flag_reason       String?
+  needs_attention   Boolean      @default(false)
+  reviewed          Boolean      @default(false)
+  override_marks    Int?
+  override_note     String?
+  final_marks       Int
+}
