@@ -51,36 +51,42 @@ function FeedbackWidget() {
 
 export default function Sidebar() {
   const { teacher, logout } = useAuth();
+  const [open, setOpen] = useState(false);
   return (
-    <aside className="sidebar">
-      <div className="sidebar-brand">
-        <span className="sidebar-mark">SM</span>
-        <div>
-          <div className="sidebar-name">Sentra Merit</div>
-          <div className="sidebar-sub">English · Maths · Science</div>
-        </div>
-      </div>
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
-        {nav.map(n => (
-          <NavLink key={n.to} to={n.to} className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>
-            <span className="nav-glyph">{n.g}</span>{n.label}
-          </NavLink>
-        ))}
-      </nav>
-      <div className="sidebar-footer">
-        {teacher && (
-          <div className="sidebar-teacher">
-            <div>
-              <div className="teacher-name">{teacher.name}</div>
-              <div className="teacher-email">{teacher.email}</div>
-            </div>
-            <button className="logout-btn" onClick={logout}>Log out</button>
+    <>
+      <button type="button" className="hamburger-btn" aria-label="Open menu" onClick={() => setOpen(true)}>☰</button>
+      {open && <div className="sidebar-overlay" onClick={() => setOpen(false)} />}
+      <aside className={'sidebar' + (open ? ' sidebar-open' : '')}>
+        <button type="button" className="sidebar-close-btn" aria-label="Close menu" onClick={() => setOpen(false)}>×</button>
+        <div className="sidebar-brand">
+          <span className="sidebar-mark">SM</span>
+          <div>
+            <div className="sidebar-name">Sentra Merit</div>
+            <div className="sidebar-sub">English · Maths · Science</div>
           </div>
-        )}
-        <hr className="sidebar-rule" />
-        <div style={{ marginBottom:'.6rem' }}><FeedbackWidget /></div>
-        <p className="sidebar-note">AI marks are suggestions. A teacher reviews every script before it's final.</p>
-      </div>
-    </aside>
+        </div>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '.3rem' }}>
+          {nav.map(n => (
+            <NavLink key={n.to} to={n.to} onClick={() => setOpen(false)} className={({ isActive }) => 'nav-link' + (isActive ? ' active' : '')}>
+              <span className="nav-glyph">{n.g}</span>{n.label}
+            </NavLink>
+          ))}
+        </nav>
+        <div className="sidebar-footer">
+          {teacher && (
+            <div className="sidebar-teacher">
+              <div>
+                <div className="teacher-name">{teacher.name}</div>
+                <div className="teacher-email">{teacher.email}</div>
+              </div>
+              <button className="logout-btn" onClick={logout}>Log out</button>
+            </div>
+          )}
+          <hr className="sidebar-rule" />
+          <div style={{ marginBottom:'.6rem' }}><FeedbackWidget /></div>
+          <p className="sidebar-note">AI marks are suggestions. A teacher reviews every script before it's final.</p>
+        </div>
+      </aside>
+    </>
   );
 }

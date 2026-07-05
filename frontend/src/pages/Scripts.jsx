@@ -14,7 +14,7 @@ function ExportBar({ scripts }) {
   }
   return (
     <div style={{ marginBottom:'1.25rem' }}>
-      <div style={{ display:'flex', alignItems:'center', gap:'.7rem', background:'var(--card)', border:'1px solid var(--line)', borderRadius:'6px', padding:'.9rem 1.1rem' }}>
+      <div className="export-bar">
         <span style={{ fontSize:'.85rem', color:'var(--ink-soft)' }}>Export {completed.length} completed script{completed.length > 1 ? 's' : ''}</span>
         <select value={schemeId} onChange={e => setSchemeId(e.target.value)} style={{ flex:1, maxWidth:'280px' }}>
           <option value="">All schemes</option>
