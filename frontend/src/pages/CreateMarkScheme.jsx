@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api';
 let _qid = 0;
 const blank = () => ({ _k: ++_qid, question_number:'', question_text:'', max_marks:'', marking_type:'rubric', method_marks:'', answer_marks:'', accepted_answers:'' });
@@ -122,6 +122,7 @@ export default function CreateMarkScheme() {
 
   return (
     <div>
+      <Link to="/mark-schemes" className="link-toggle" style={{ display: 'inline-block', marginBottom: '.75rem' }}>← Back to mark schemes</Link>
       <div className="page-header"><span className="eyebrow">New scheme</span><h1>Build a mark scheme</h1>
         <p>{mode === 'scan' ? 'Upload photos of your paper mark scheme — AI reads it into questions you can then check and edit.' : 'Add each question and its marking guidance, or scan an existing mark scheme instead.'}</p>
       </div>
@@ -213,6 +214,7 @@ export default function CreateMarkScheme() {
         {error && <p style={{ color:'var(--pen)', fontSize:'.88rem', marginBottom:'1rem' }}>{error}</p>}
         <div className="action-bar" style={{ marginTop:0 }}>
           <button type="submit" className="btn" disabled={busy}>{busy ? 'Saving…' : 'Save mark scheme'}</button>
+          <Link to="/mark-schemes" className="btn btn-outline">Cancel</Link>
         </div>
       </form>
     </div>

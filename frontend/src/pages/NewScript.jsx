@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { api } from '../api';
 const SIM_STAGES = ['Reading script image…','Running OCR on each answer…','AI comparing against mark scheme…','Generating feedback…'];
 const UPL_STAGES = ['Uploading images…','Running OCR (this can take a moment the first time)…','AI marking each answer…','Generating feedback…'];
@@ -45,6 +45,7 @@ export default function NewScript() {
   );
   return (
     <div>
+      <Link to="/scripts" className="link-toggle" style={{ display: 'inline-block', marginBottom: '.75rem' }}>← Back to scripts</Link>
       <div className="page-header"><span className="eyebrow">New submission</span><h1>Mark a script</h1>
         <p>{mode==='simulated' ? 'OCR and AI marking are simulated — no files needed. Shows the full pipeline immediately.' : 'Upload one photo per question. Real OCR runs on each image, then AI marks the extracted text.'}</p>
       </div>
@@ -74,7 +75,10 @@ export default function NewScript() {
           </div>
         )}
         {error && <p style={{ color:'var(--pen)', fontSize:'.88rem', marginTop:'.8rem' }}>{error}</p>}
-        <div className="action-bar"><button type="submit" className="btn">{mode==='upload'?'Upload & mark':'Scan & mark script'}</button></div>
+        <div className="action-bar">
+          <button type="submit" className="btn">{mode==='upload'?'Upload & mark':'Scan & mark script'}</button>
+          <Link to="/scripts" className="btn btn-outline">Cancel</Link>
+        </div>
       </form>
     </div>
   );
