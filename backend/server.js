@@ -20,6 +20,11 @@ function lanAddress() {
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// Render (and any platform load balancer/CDN in front of it) sits between the client and
+// this process, adding an X-Forwarded-For header — without this, express-rate-limit
+// throws on every request to a rate-limited route instead of reading the real client IP.
+app.set('trust proxy', 1);
+
 app.use(cors());
 app.use(express.json());
 const up = path.join(__dirname, 'uploads');
