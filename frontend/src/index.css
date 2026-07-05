@@ -131,6 +131,14 @@ h1,h2,h3{font-family:var(--font-d);font-weight:600;margin:0;letter-spacing:-.01e
 .auth-demo{text-align:center;font-size:.78rem;color:var(--ink-faint);margin-top:.75rem;}
 @media(max-width:420px){.auth-page{padding:0;}.auth-card{padding:1.75rem 1.4rem;border-radius:0;min-height:100vh;max-width:100%;}}
 
+/* Templates */
+.template-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.8rem;}
+.template-card{text-align:left;background:var(--paper);border:1px solid var(--line-strong);border-radius:6px;padding:.9rem 1rem;transition:border-color .12s,background .12s;}
+.template-card:hover{border-color:var(--brass);background:var(--brass-soft);}
+.template-title{font-weight:500;font-size:.92rem;margin-bottom:.3rem;}
+.template-meta{font-family:var(--font-m);font-size:.72rem;color:var(--ink-faint);}
+@media(max-width:767px){.template-grid{grid-template-columns:1fr;}}
+
 /* Question builder */
 .qb-row{border:1px solid var(--line);border-radius:6px;padding:1.1rem;margin-bottom:.9rem;background:var(--card);}
 .qb-top{display:flex;gap:.7rem;margin-bottom:.7rem;flex-wrap:wrap;}

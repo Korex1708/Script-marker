@@ -5,12 +5,69 @@ let _qid = 0;
 const blank = () => ({ _k: ++_qid, question_number:'', question_text:'', max_marks:'', marking_type:'rubric', method_marks:'', answer_marks:'', accepted_answers:'' });
 const SUBJECTS = ['English','Mathematics','Chemistry','Physics','Biology','Other'];
 
+const TEMPLATES = [
+  {
+    name: 'WAEC English Language Paper 2 (Summary + Essay)', subject: 'English',
+    questions: [
+      { question_text: 'Read the passage and answer in your own words.', max_marks: 10, marking_type: 'rubric' },
+      { question_text: 'Write a formal letter to your principal.', max_marks: 20, marking_type: 'rubric' },
+      { question_text: 'Write a narrative essay.', max_marks: 20, marking_type: 'rubric' },
+      { question_text: 'Comprehension questions — name the literary device used.', max_marks: 5, marking_type: 'multi_accept', accepted_answers: [] },
+    ],
+  },
+  {
+    name: 'WAEC Mathematics (Algebra & Statistics)', subject: 'Mathematics',
+    questions: [
+      { question_text: 'Simplify the algebraic expression.', max_marks: 3, marking_type: 'method_and_answer', method_marks: 2, answer_marks: 1 },
+      { question_text: 'Solve the quadratic equation by factorisation. Show all working.', max_marks: 4, marking_type: 'method_and_answer', method_marks: 3, answer_marks: 1 },
+      { question_text: 'A bag contains 5 red balls and 3 blue balls. Find the probability.', max_marks: 3, marking_type: 'method_and_answer', method_marks: 2, answer_marks: 1 },
+      { question_text: 'Calculate the mean, median and mode. Show working.', max_marks: 6, marking_type: 'method_and_answer', method_marks: 4, answer_marks: 2 },
+    ],
+  },
+  {
+    name: 'WAEC Chemistry (Short Answers)', subject: 'Chemistry',
+    questions: [
+      { question_text: 'State the periodic law.', max_marks: 2, marking_type: 'multi_accept', accepted_answers: ['properties of elements are periodic functions of their atomic numbers', 'the properties of elements repeat periodically when arranged in order of atomic number'] },
+      { question_text: 'What is the chemical formula for limestone?', max_marks: 1, marking_type: 'exact_match', accepted_answers: ['CaCO3', 'CaCO₃', 'calcium carbonate'] },
+      { question_text: 'Explain the process of electrolysis.', max_marks: 4, marking_type: 'rubric' },
+      { question_text: 'Calculate the number of moles in 44g of CO₂. (M of CO₂ = 44)', max_marks: 3, marking_type: 'method_and_answer', method_marks: 2, answer_marks: 1 },
+    ],
+  },
+  {
+    name: 'NECO Biology (Short Answer + Essay)', subject: 'Biology',
+    questions: [
+      { question_text: 'State TWO functions of the liver.', max_marks: 2, marking_type: 'multi_accept', accepted_answers: ['bile production', 'detoxification', 'glycogen storage', 'protein synthesis', 'deamination', 'urea production'] },
+      { question_text: 'What is osmosis?', max_marks: 2, marking_type: 'multi_accept', accepted_answers: ['movement of water molecules', 'from region of high water concentration to low water concentration', 'through a semi-permeable membrane'] },
+      { question_text: 'Describe the process of photosynthesis.', max_marks: 6, marking_type: 'rubric' },
+      { question_text: 'Draw and label a diagram of the human heart.', max_marks: 5, marking_type: 'rubric' },
+    ],
+  },
+];
+
 export default function CreateMarkScheme() {
   const navigate = useNavigate();
   const [mode, setMode] = useState('manual');
   const [title, setTitle] = useState(''); const [subject, setSubject] = useState('English');
   const [questions, setQuestions] = useState([blank()]); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
   const [scanFiles, setScanFiles] = useState([]); const [scanning, setScanning] = useState(false); const [scanError, setScanError] = useState('');
+  const [showTemplates, setShowTemplates] = useState(true);
+
+  function applyTemplate(t) {
+    setTitle(t.name);
+    setSubject(t.subject);
+    setQuestions(t.questions.map((q, i) => ({
+      _k: ++_qid,
+      question_number: String(i + 1),
+      question_text: q.question_text,
+      max_marks: String(q.max_marks),
+      marking_type: q.marking_type,
+      method_marks: q.method_marks != null ? String(q.method_marks) : '',
+      answer_marks: q.answer_marks != null ? String(q.answer_marks) : '',
+      accepted_answers: (q.accepted_answers || []).join('\n'),
+    })));
+    setShowTemplates(false);
+    setMode('manual');
+  }
 
   async function extract(e) {
     e.preventDefault(); setScanError('');
@@ -68,6 +125,25 @@ export default function CreateMarkScheme() {
       <div className="page-header"><span className="eyebrow">New scheme</span><h1>Build a mark scheme</h1>
         <p>{mode === 'scan' ? 'Upload photos of your paper mark scheme — AI reads it into questions you can then check and edit.' : 'Add each question and its marking guidance, or scan an existing mark scheme instead.'}</p>
       </div>
+
+      {showTemplates ? (
+        <div className="card" style={{ marginBottom:'1.25rem' }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1rem', flexWrap:'wrap', gap:'.5rem' }}>
+            <h2 style={{ fontSize:'1.05rem' }}>Start from a WAEC/NECO template</h2>
+            <button type="button" className="link-toggle" onClick={() => setShowTemplates(false)}>← Back to blank form</button>
+          </div>
+          <div className="template-grid">
+            {TEMPLATES.map(t => (
+              <button key={t.name} type="button" className="template-card" onClick={() => applyTemplate(t)}>
+                <div className="template-title">{t.name}</div>
+                <div className="template-meta">{t.subject} · {t.questions.length} questions · {t.questions.reduce((s,q)=>s+q.max_marks,0)} marks</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <button type="button" className="link-toggle" style={{ marginBottom:'1rem' }} onClick={() => setShowTemplates(true)}>↑ Start from a template instead</button>
+      )}
 
       <div className="mode-toggle" style={{ marginBottom:'1.25rem' }}>
         <button type="button" className={'mode-btn'+(mode==='manual'?' mode-btn-active':'')} onClick={() => setMode('manual')}>Build manually</button>
