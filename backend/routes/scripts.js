@@ -128,7 +128,7 @@ router.post('/upload', upload.any(), async (req, res) => {
   try {
     const ocrResults = await Promise.all(questions.map(async q => {
       const file = fileByQ[q.question_number];
-      const { text, confidence } = await extractTextFromImage(file.path);
+      const { text, confidence } = await extractTextFromImage(file.path, { markingType: q.marking_type });
       return { questionNumber: q.question_number, questionText: q.question_text, maxMarks: q.max_marks, markingType: q.marking_type, acceptedAnswers: q.accepted_answers || [], methodMarks: q.method_marks, answerMarks: q.answer_marks, ocrText: text || '(No text detected)', ocrConfidence: confidence, imagePath: `/uploads/${path.basename(file.path)}` };
     }));
     const totalAwarded = await processQuestions({ scriptId: script.id, subject: scheme.subject, ocrResults, isUpload: true });
