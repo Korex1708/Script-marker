@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sentramerit
+      POSTGRES_PASSWORD: sentramerit
+      POSTGRES_DB: sentramerit
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sentramerit"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "3001:3001"
+    env_file:
+      - ./backend/.env
+    environment:
+      # Overrides whatever DATABASE_URL is in .env — inside the Compose network the
+      # database is reachable at the "postgres" service name, not localhost/Neon/etc.
+      DATABASE_URL: postgresql://sentramerit:sentramerit@postgres:5432/sentramerit
+    volumes:
+      - backend_uploads:/app/uploads
+
+volumes:
+  pgdata:
+  backend_uploads:

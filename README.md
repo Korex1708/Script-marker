@@ -8,9 +8,10 @@ English · Mathematics · Chemistry · Physics, all in one app.
 ```
 cd backend
 npm install
+cp .env.example .env   # then set DATABASE_URL to a Postgres connection string (e.g. a free Neon.tech project)
 npm start
 ```
-Runs on `http://localhost:3001`. A demo account and 5 sample mark schemes are seeded automatically.
+Runs on `http://localhost:3001`. `npm start` applies any pending database migrations automatically before booting, then seeds a demo account and 5 sample mark schemes on first run.
 
 **2. Frontend** (in a second terminal)
 ```
@@ -42,3 +43,33 @@ On the "Mark a script" screen, toggle from "Simulated demo" to "Upload real imag
 ## Adding more subjects
 
 The `marking_type` field (`rubric`, `method_and_answer`, `exact_match`, `multi_accept`) routes each question to the right marking logic. Biology, Economics, History etc. can all be added by creating mark schemes through the UI — they'll default to rubric marking and use the same English pipeline. A subject-specific AI engine only needs to be written when the marking logic genuinely differs (as it does for Maths).
+
+## Deployment
+
+The backend serves the built frontend from the same port by default (see `frontend/dist` handling in `backend/server.js`), so the simplest deploy is one service running the backend with the frontend already built. The options below cover that and a split frontend/backend setup.
+
+### Option A — Docker Compose (backend + Postgres, all-in-one)
+
+```
+docker-compose up --build
+```
+
+Builds the backend image, starts a Postgres 15 container with a persistent volume, waits for Postgres to be healthy, then runs migrations and boots the server on `http://localhost:3001`. Set real values in `backend/.env` first (`ANTHROPIC_API_KEY`, `JWT_SECRET`, etc.) — `DATABASE_URL` is overridden automatically to point at the Compose-internal Postgres service, so whatever's in `.env` for that one variable is ignored. You still need to build the frontend separately (`cd frontend && npm run build`) if you want it served from the same container, since the Docker image only contains the backend.
+
+### Option B — Split hosting: Railway (backend) + Vercel (frontend)
+
+**Backend on Railway:**
+1. Create a new Railway project from this repo, root directory `backend/`.
+2. Add a Postgres plugin (or point `DATABASE_URL` at any hosted Postgres — Neon, Supabase, etc.).
+3. Set environment variables in Railway's dashboard: `DATABASE_URL`, `JWT_SECRET`, `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL`, and optionally `GOOGLE_VISION_API_KEY` / `MATHPIX_API_ID` / `MATHPIX_API_KEY`. Set `CORS_ORIGIN` to your Vercel frontend's URL once you have it (step below), and `NODE_ENV=production`.
+4. Railway runs `npm start`, which applies migrations and boots the server. Note the public URL Railway gives the service.
+
+**Frontend on Vercel:**
+1. Import this repo into Vercel, root directory `frontend/`.
+2. Set the environment variable `VITE_API_URL` to your Railway backend's URL + `/api` (e.g. `https://your-app.up.railway.app/api`).
+3. Deploy — `frontend/vercel.json` handles client-side routing (React Router) so refreshing on a non-root route doesn't 404.
+4. Go back to Railway and set `CORS_ORIGIN` to this Vercel URL so the backend accepts requests from it.
+
+### Currently live
+
+This app is also deployed as a single Render web service (frontend built and served by the same Express process) — see `render.yaml` at the repo root for that configuration.

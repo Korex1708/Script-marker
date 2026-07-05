@@ -25,7 +25,9 @@ const PORT = process.env.PORT || 3001;
 // throws on every request to a rate-limited route instead of reading the real client IP.
 app.set('trust proxy', 1);
 
-app.use(cors());
+// CORS_ORIGIN restricts requests to a specific frontend origin (e.g. a Vercel deployment
+// split from this backend) — unset/development defaults to allowing any origin.
+app.use(cors(process.env.CORS_ORIGIN ? { origin: process.env.CORS_ORIGIN } : {}));
 app.use(express.json());
 const up = path.join(__dirname, 'uploads');
 fs.mkdirSync(up, { recursive: true });
@@ -54,7 +56,12 @@ app.use('/api/results', requireAuth, require('./routes/results'));
 app.use('/api/export', requireAuth, require('./routes/export'));
 app.use('/api/feedback', requireAuth, require('./routes/feedback'));
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok', timestamp: new Date().toISOString(), aiProvider: process.env.ANTHROPIC_API_KEY ? 'anthropic' : 'mock', ocrProvider: 'tesseract' }));
+app.get('/api/health', (req, res) => res.json({
+  status: 'ok', timestamp: new Date().toISOString(),
+  aiProvider: process.env.ANTHROPIC_API_KEY ? 'anthropic' : 'mock',
+  ocrProvider: process.env.GOOGLE_VISION_API_KEY ? 'google-vision' : 'tesseract',
+  mathpixEnabled: !!(process.env.MATHPIX_API_ID && process.env.MATHPIX_API_KEY),
+}));
 
 // Serve the built frontend from this same server/port, so there's one process and one
 // URL to share with pilot teachers instead of running the Vite dev server separately.
