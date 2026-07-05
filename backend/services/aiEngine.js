@@ -9,7 +9,7 @@ async function markEnglishAnswer(questionText, ocrText, maxMarks, ocrConfidence 
     method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': KEY, 'anthropic-version': '2023-06-01' },
     body: JSON.stringify({ model: MODEL, max_tokens: 400, messages: [{ role: 'user', content: prompt }] }),
   });
-  if (!res.ok) throw new Error(`Anthropic API ${res.status}`);
+  if (!res.ok) throw new Error(`Anthropic API ${res.status}: ${(await res.text()).slice(0, 300)}`);
   const data = await res.json();
   const block = data.content.find(b => b.type === 'text');
   let p; try { p = JSON.parse(block.text.replace(/```json|```/g, '').trim()); } catch { throw new Error('Bad JSON from AI'); }
