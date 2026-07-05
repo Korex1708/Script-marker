@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
@@ -12,6 +13,14 @@ const { mockOcrSciScript } = require('../services/mockOcrSci');
 const { extractTextFromImage } = require('../services/ocrEngine');
 const { markAnswer } = require('../services/markingService');
 const { validateImageFiles } = require('../services/imageValidation');
+
+// Keyed by teacher (not IP) since a school's whole staff room can share one public IP —
+// an IP-based limit would let one teacher's marking runs lock out their colleagues.
+const processLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false,
+  keyGenerator: req => req.teacherId,
+  message: { error: 'You\'ve hit the hourly limit for marking new scripts. Please wait a bit and try again.' },
+});
 
 const uploadsDir = path.join(__dirname, '..', 'uploads');
 const storage = multer.diskStorage({
@@ -77,7 +86,7 @@ async function processQuestions({ scriptId, subject, ocrResults, isUpload }) {
   return totalAwarded;
 }
 
-router.post('/', async (req, res) => {
+router.post('/', processLimiter, async (req, res) => {
   const { student_name, mark_scheme_id } = req.body;
   if (!student_name || !mark_scheme_id) return res.status(400).json({ error: 'student_name and mark_scheme_id required.' });
   const scheme = await prisma.markScheme.findFirst({
@@ -101,7 +110,7 @@ router.post('/', async (req, res) => {
   res.status(201).json(await prisma.script.findUnique({ where: { id: script.id } }));
 });
 
-router.post('/upload', upload.any(), async (req, res) => {
+router.post('/upload', processLimiter, upload.any(), async (req, res) => {
   const { student_name, mark_scheme_id } = req.body;
   const files = req.files || [];
   const cleanup = () => files.forEach(f => fs.unlink(f.path, () => {}));

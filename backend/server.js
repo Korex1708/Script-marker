@@ -1,6 +1,8 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
@@ -25,10 +27,25 @@ const PORT = process.env.PORT || 3001;
 // throws on every request to a rate-limited route instead of reading the real client IP.
 app.set('trust proxy', 1);
 
+// CSP is disabled rather than configured — this app relies heavily on per-element inline
+// `style={{...}}` (would need 'unsafe-inline' anyway) and loads fonts from Google's CDN,
+// and getting a real CSP right without breaking either needs a full visual re-audit of
+// every page. The other helmet protections (nosniff, frameguard, HSTS, etc.) still apply.
+// crossOriginResourcePolicy is relaxed since a split Vercel+Railway deploy (see README)
+// means the frontend legitimately fetches this API from a different origin.
+app.use(helmet({ contentSecurityPolicy: false, crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+
 // CORS_ORIGIN restricts requests to a specific frontend origin (e.g. a Vercel deployment
 // split from this backend) — unset/development defaults to allowing any origin.
 app.use(cors(process.env.CORS_ORIGIN ? { origin: process.env.CORS_ORIGIN } : {}));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, limit: 200, standardHeaders: true, legacyHeaders: false,
+  message: { error: 'Too many requests. Please slow down and try again shortly.' },
+});
+app.use('/api', generalLimiter);
+
 const up = path.join(__dirname, 'uploads');
 fs.mkdirSync(up, { recursive: true });
 app.use('/uploads', express.static(up));
@@ -74,6 +91,15 @@ if (fs.existsSync(frontendDist)) {
 } else {
   console.log('No frontend build found at frontend/dist — run `npm run build` in frontend/ to serve the app from this port.');
 }
+
+// Catches synchronous throws and explicit next(err) calls that reach here unhandled.
+// (Async rejections inside route handlers aren't routed to Express error middleware in
+// Express 4 — each route already wraps its own risky async work in try/catch and returns
+// its own JSON error, which is where most real error messages in this app come from.)
+app.use((err, req, res, next) => {
+  console.error(err);
+  res.status(err.status || 500).json({ error: process.env.NODE_ENV === 'production' ? 'Something went wrong. Please try again.' : err.message });
+});
 
 // Safety net — a failed OCR call in a worker thread can otherwise crash the whole server.
 process.on('uncaughtException', err => console.error('Uncaught exception (server staying up):', err.message));
