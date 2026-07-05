@@ -54,7 +54,7 @@ export default function Sidebar() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" className="hamburger-btn" aria-label="Open menu" onClick={() => setOpen(true)}>☰</button>
+      {!open && <button type="button" className="hamburger-btn" aria-label="Open menu" onClick={() => setOpen(true)}>☰</button>}
       {open && <div className="sidebar-overlay" onClick={() => setOpen(false)} />}
       <aside className={'sidebar' + (open ? ' sidebar-open' : '')}>
         <button type="button" className="sidebar-close-btn" aria-label="Close menu" onClick={() => setOpen(false)}>×</button>
