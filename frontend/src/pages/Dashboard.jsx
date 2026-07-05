@@ -3,11 +3,25 @@ import { Link } from 'react-router-dom';
 import { api } from '../api';
 export default function Dashboard() {
   const [stats, setStats] = useState(null); const [scripts, setScripts] = useState([]);
-  useEffect(() => { Promise.all([api.getStats(), api.getScripts()]).then(([s, sc]) => { setStats(s); setScripts(sc.slice(0, 6)); }); }, []);
+  const [joinCode, setJoinCode] = useState(null); const [copied, setCopied] = useState(false);
+  useEffect(() => {
+    Promise.all([api.getStats(), api.getScripts()]).then(([s, sc]) => { setStats(s); setScripts(sc.slice(0, 6)); });
+    api.getJoinCode().then(r => setJoinCode(r.join_code)).catch(() => {});
+  }, []);
+  function copyCode() { navigator.clipboard.writeText(joinCode).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }); }
   if (!stats) return <div className="loading-overlay"><div className="spinner" />Loading…</div>;
   return (
     <div>
       <div className="page-header"><span className="eyebrow">Overview</span><h1>Marking desk</h1><p>Scripts are OCR'd and given an AI-suggested mark. Nothing reaches a student until you've reviewed it here.</p></div>
+      {joinCode && (
+        <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '.75rem', marginBottom: '1.5rem' }}>
+          <div>
+            <div style={{ fontSize: '.82rem', color: 'var(--ink-soft)', marginBottom: '.3rem' }}>Student join code — share this and their exact name so students can view their marked results</div>
+            <div style={{ fontFamily: 'var(--font-m)', fontSize: '1.3rem', fontWeight: 600, letterSpacing: '.08em' }}>{joinCode}</div>
+          </div>
+          <button type="button" className="btn btn-outline" onClick={copyCode}>{copied ? '✓ Copied' : 'Copy code'}</button>
+        </div>
+      )}
       <div className="stat-row">
         <div className="stat-cell"><span className="label">Total scripts</span><span className="value">{stats.total}</span></div>
         <div className="stat-cell"><span className="label">Awaiting review</span><span className="value" style={{ color:'var(--brass)' }}>{stats.pending_review}</span></div>

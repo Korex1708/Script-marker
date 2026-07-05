@@ -21,12 +21,32 @@ function resolveSecret() {
 }
 const SECRET = resolveSecret();
 
+// Checking the claim's presence (not just that the token verifies) matters once student
+// tokens exist too — otherwise a student token would decode fine, req.teacherId would be
+// undefined, and Prisma treats `where: { teacher_id: undefined }` as "no filter at all",
+// silently returning every teacher's data instead of erroring.
 function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
   const token = header.startsWith('Bearer ') ? header.slice(7) : null;
   if (!token) return res.status(401).json({ error: 'Not signed in. Please log in to continue.' });
   try {
-    req.teacherId = jwt.verify(token, SECRET).teacherId;
+    const payload = jwt.verify(token, SECRET);
+    if (!payload.teacherId) throw new Error('not a teacher token');
+    req.teacherId = payload.teacherId;
+    next();
+  } catch {
+    return res.status(401).json({ error: 'Your session has expired. Please log in again.' });
+  }
+}
+
+function requireStudentAuth(req, res, next) {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+  if (!token) return res.status(401).json({ error: 'Not signed in. Please log in to continue.' });
+  try {
+    const payload = jwt.verify(token, SECRET);
+    if (!payload.studentId) throw new Error('not a student token');
+    req.studentId = payload.studentId;
     next();
   } catch {
     return res.status(401).json({ error: 'Your session has expired. Please log in again.' });
@@ -36,5 +56,8 @@ function requireAuth(req, res, next) {
 function signToken(teacherId) {
   return jwt.sign({ teacherId }, SECRET, { expiresIn: '30d' });
 }
+function signStudentToken(studentId) {
+  return jwt.sign({ studentId }, SECRET, { expiresIn: '30d' });
+}
 
-module.exports = { requireAuth, signToken };
+module.exports = { requireAuth, signToken, requireStudentAuth, signStudentToken };

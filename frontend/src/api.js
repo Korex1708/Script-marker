@@ -61,4 +61,26 @@ export const api = {
     window.open(url, '_blank');
     setTimeout(() => URL.revokeObjectURL(url), 30000);
   },
+  getJoinCode: () => request('/auth/join-code'),
+};
+
+// Students get their own token (separate localStorage key + separate 401 redirect) so a
+// teacher and a student can't clobber each other's session in the same browser.
+function getStudentToken() { return localStorage.getItem('sm_student_token'); }
+async function studentRequest(path, options = {}) {
+  const token = getStudentToken();
+  const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  const res = await fetch(`${BASE}${path}`, { ...options, headers });
+  if (res.status === 401) { localStorage.removeItem('sm_student_token'); window.location.href = '/student/login'; throw new Error('Session expired.'); }
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+export const studentApi = {
+  login: (email, password) => studentRequest('/student-auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+  register: (name, email, password, join_code) => studentRequest('/student-auth/register', { method: 'POST', body: JSON.stringify({ name, email, password, join_code }) }),
+  getMe: () => studentRequest('/student-auth/me'),
+  getResults: () => studentRequest('/student/results'),
+  getResult: id => studentRequest(`/student/results/${id}`),
 };

@@ -6,7 +6,7 @@ const fs = require('fs');
 const os = require('os');
 const prisma = require('./db/prisma');
 const { seed } = require('./prisma/seed');
-const { requireAuth } = require('./middleware/auth');
+const { requireAuth, requireStudentAuth } = require('./middleware/auth');
 
 function lanAddress() {
   for (const ifaces of Object.values(os.networkInterfaces())) {
@@ -55,6 +55,8 @@ app.use('/api/scripts', requireAuth, require('./routes/scripts'));
 app.use('/api/results', requireAuth, require('./routes/results'));
 app.use('/api/export', requireAuth, require('./routes/export'));
 app.use('/api/feedback', requireAuth, require('./routes/feedback'));
+app.use('/api/student-auth', require('./routes/studentAuth'));
+app.use('/api/student', requireStudentAuth, require('./routes/student'));
 
 app.get('/api/health', (req, res) => res.json({
   status: 'ok', timestamp: new Date().toISOString(),

@@ -21,9 +21,25 @@ model Teacher {
   email         String   @unique
   password_hash String
   created_at    DateTime @default(now())
+  // Shared by all of a teacher's students (there's no per-class roster in this app) —
+  // generated on first request, not at signup, so most teachers never see an unused field.
+  join_code     String?  @unique
 
   mark_schemes MarkScheme[]
   scripts      Script[]
+  students     Student[]
+}
+
+model Student {
+  id            String   @id @default(uuid())
+  teacher_id    String
+  teacher       Teacher  @relation(fields: [teacher_id], references: [id])
+  name          String
+  email         String   @unique
+  password_hash String
+  created_at    DateTime @default(now())
+
+  @@index([teacher_id])
 }
 
 model MarkScheme {

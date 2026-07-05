@@ -39,4 +39,24 @@ router.get('/me', requireAuth, async (req, res) => {
   res.json({ id: t.id, name: t.name, email: t.email });
 });
 
+const JOIN_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O or 1/I — easy to misread when shared verbally
+function generateJoinCode() {
+  let code = '';
+  for (let i = 0; i < 6; i++) code += JOIN_CODE_CHARS[Math.floor(Math.random() * JOIN_CODE_CHARS.length)];
+  return code;
+}
+
+// One join code per teacher (not per class/paper — there's no class roster in this app).
+// Generated lazily on first request so teachers who never use the student portal never
+// see an unused code sitting on their account.
+router.get('/join-code', requireAuth, async (req, res) => {
+  let t = await prisma.teacher.findUnique({ where: { id: req.teacherId } });
+  if (!t.join_code) {
+    let code, clash;
+    do { code = generateJoinCode(); clash = await prisma.teacher.findUnique({ where: { join_code: code } }); } while (clash);
+    t = await prisma.teacher.update({ where: { id: req.teacherId }, data: { join_code: code } });
+  }
+  res.json({ join_code: t.join_code });
+});
+
 module.exports = router;
