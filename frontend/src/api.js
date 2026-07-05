@@ -38,6 +38,7 @@ export const api = {
   getMarkSchemes: () => request('/mark-schemes'),
   getMarkScheme: id => request(`/mark-schemes/${id}`),
   createMarkScheme: payload => request('/mark-schemes', { method: 'POST', body: JSON.stringify(payload) }),
+  extractMarkScheme: formData => request('/mark-schemes/extract', { method: 'POST', body: formData }),
   deleteMarkScheme: id => request(`/mark-schemes/${id}`, { method: 'DELETE' }),
   getScripts: () => request('/scripts'),
   getScript: id => request(`/scripts/${id}`),

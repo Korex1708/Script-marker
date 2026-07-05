@@ -3,11 +3,39 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 let _qid = 0;
 const blank = () => ({ _k: ++_qid, question_number:'', question_text:'', max_marks:'', marking_type:'rubric', method_marks:'', answer_marks:'', accepted_answers:'' });
+const SUBJECTS = ['English','Mathematics','Chemistry','Physics','Biology','Other'];
 
 export default function CreateMarkScheme() {
   const navigate = useNavigate();
+  const [mode, setMode] = useState('manual');
   const [title, setTitle] = useState(''); const [subject, setSubject] = useState('English');
   const [questions, setQuestions] = useState([blank()]); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
+  const [scanFiles, setScanFiles] = useState([]); const [scanning, setScanning] = useState(false); const [scanError, setScanError] = useState('');
+
+  async function extract(e) {
+    e.preventDefault(); setScanError('');
+    if (!scanFiles.length) return setScanError('Choose at least one photo of the mark scheme.');
+    setScanning(true);
+    try {
+      const fd = new FormData();
+      scanFiles.forEach(f => fd.append('images', f));
+      const draft = await api.extractMarkScheme(fd);
+      setTitle(draft.title || '');
+      setSubject(SUBJECTS.includes(draft.subject) ? draft.subject : 'English');
+      setQuestions((draft.questions.length ? draft.questions : [{}]).map(q => ({
+        _k: ++_qid,
+        question_number: q.question_number != null ? String(q.question_number) : '',
+        question_text: q.question_text || '',
+        max_marks: q.max_marks != null ? String(q.max_marks) : '',
+        marking_type: q.marking_type || 'rubric',
+        method_marks: q.method_marks != null ? String(q.method_marks) : '',
+        answer_marks: q.answer_marks != null ? String(q.answer_marks) : '',
+        accepted_answers: (q.accepted_answers || []).join('\n'),
+      })));
+      setMode('manual');
+    } catch (err) { setScanError(err.message); }
+    setScanning(false);
+  }
 
   function upd(k, f, v) {
     setQuestions(prev => prev.map(q => {
@@ -37,14 +65,36 @@ export default function CreateMarkScheme() {
 
   return (
     <div>
-      <div className="page-header"><span className="eyebrow">New scheme</span><h1>Build a mark scheme</h1></div>
-      <form onSubmit={submit}>
+      <div className="page-header"><span className="eyebrow">New scheme</span><h1>Build a mark scheme</h1>
+        <p>{mode === 'scan' ? 'Upload photos of your paper mark scheme — AI reads it into questions you can then check and edit.' : 'Add each question and its marking guidance, or scan an existing mark scheme instead.'}</p>
+      </div>
+
+      <div className="mode-toggle" style={{ marginBottom:'1.25rem' }}>
+        <button type="button" className={'mode-btn'+(mode==='manual'?' mode-btn-active':'')} onClick={() => setMode('manual')}>Build manually</button>
+        <button type="button" className={'mode-btn'+(mode==='scan'?' mode-btn-active':'')} onClick={() => setMode('scan')}>Scan a mark scheme</button>
+      </div>
+
+      {mode === 'scan' && (
+        <form onSubmit={extract} className="card" style={{ marginBottom:'1.25rem' }}>
+          <div className="field">
+            <label>Photos of the mark scheme (one per page)</label>
+            <input type="file" multiple accept="image/png,image/jpeg,image/webp" onChange={e => setScanFiles(Array.from(e.target.files || []))} />
+            {scanFiles.length > 0 && <span style={{ fontSize:'.8rem', color:'var(--ink-faint)' }}>{scanFiles.length} file{scanFiles.length>1?'s':''} selected</span>}
+          </div>
+          {scanError && <p style={{ color:'var(--pen)', fontSize:'.88rem', marginTop:'.6rem' }}>{scanError}</p>}
+          <div className="action-bar" style={{ marginTop:'1rem' }}>
+            <button type="submit" className="btn" disabled={scanning}>{scanning ? 'Reading mark scheme…' : 'Extract questions'}</button>
+          </div>
+        </form>
+      )}
+
+      <form onSubmit={submit} style={{ display: mode === 'scan' ? 'none' : 'block' }}>
         <div className="card" style={{ marginBottom:'1.25rem' }}>
           <div className="field"><label>Scheme title</label><input value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. English Language — Paper 1" /></div>
           <div className="field" style={{ maxWidth:'220px' }}>
             <label>Subject</label>
             <select value={subject} onChange={e => setSubject(e.target.value)}>
-              {['English','Mathematics','Chemistry','Physics','Biology','Other'].map(s => <option key={s}>{s}</option>)}
+              {SUBJECTS.map(s => <option key={s}>{s}</option>)}
             </select>
           </div>
         </div>

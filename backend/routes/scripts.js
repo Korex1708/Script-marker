@@ -11,6 +11,7 @@ const { mockOcrMathsScript } = require('../services/mockOcrMaths');
 const { mockOcrSciScript } = require('../services/mockOcrSci');
 const { extractTextFromImage } = require('../services/ocrEngine');
 const { markAnswer } = require('../services/markingService');
+const { validateImageFiles } = require('../services/imageValidation');
 
 const uploadsDir = path.join(__dirname, '..', 'uploads');
 const storage = multer.diskStorage({
@@ -21,25 +22,6 @@ const upload = multer({
   storage, limits: { fileSize: 8 * 1024 * 1024 },
   fileFilter: (req, file, cb) => { const ok = ['image/png','image/jpeg','image/jpg','image/webp'].includes(file.mimetype); cb(ok ? null : new Error('Only PNG, JPEG, or WEBP supported.'), ok); },
 });
-
-// The client-supplied mimetype above is trivially spoofable — confirm the actual bytes
-// on disk are a real image before we let Tesseract (or anything else) touch the file.
-function sniffImageType(buf) {
-  if (buf.length >= 8 && buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return 'png';
-  if (buf.length >= 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return 'jpeg';
-  if (buf.length >= 12 && buf.toString('ascii', 0, 4) === 'RIFF' && buf.toString('ascii', 8, 12) === 'WEBP') return 'webp';
-  return null;
-}
-function validateImageFiles(files) {
-  for (const f of files) {
-    const fd = fs.openSync(f.path, 'r');
-    const buf = Buffer.alloc(12);
-    fs.readSync(fd, buf, 0, 12, 0);
-    fs.closeSync(fd);
-    if (!sniffImageType(buf)) return false;
-  }
-  return true;
-}
 
 function buildAnswerRow(answer) {
   const { result, ...rest } = withAcceptedAnswers(answer);
